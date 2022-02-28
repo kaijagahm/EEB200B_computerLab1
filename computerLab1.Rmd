@@ -7,16 +7,16 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
 # Simulating genetic drift forward in time
+
 #### Computer Lab 1 for EEB 200B
 
-Recall that genetic drift is essentially binomial sampling from one generation to the next.
-Put another way, given the allele frequency in the present generation, the allele frequency in the next generation follows a binomial distribution.
+Recall that genetic drift is essentially binomial sampling from one generation to the next. Put another way, given the allele frequency in the present generation, the allele frequency in the next generation follows a binomial distribution.
 
-R is equipped to simulate binomial random variables quite easily.
-To simulate from the binomial distribution, use the `rbinom` function.
+R is equipped to simulate binomial random variables quite easily. To simulate from the binomial distribution, use the `rbinom` function.
 
 Read about R's implementation of the binomial distribution using the following command:
 
@@ -38,55 +38,53 @@ The `rbinom` command will return a vector of length n with random draws from the
 
 #### Example:
 
-```
-> rbinom(3, 10, 0.1)
-[1] 3 0 1
-```
+    > rbinom(3, 10, 0.1)
+    [1] 3 0 1
 
-This means that we've drawn 3 random variables from a binomial distribution.
-In the first draw, we saw 3 out of 10 successes.
-In the second draw, we saw 0 out of 10 successes.
-In the third draw, we saw 1 out of 10 successes.
-
+This means that we've drawn 3 random variables from a binomial distribution. In the first draw, we saw 3 out of 10 successes. In the second draw, we saw 0 out of 10 successes. In the third draw, we saw 1 out of 10 successes.
 
 ### EXERCISE 1.
 
 What is the expected number of successes in a sample of size 10 from the binomial distribution with probability of success p=0.1?
 
 First, figure this out analytically based on the formulas from class.
+# XXX
 
 Second, write a simulation in R to confirm this.
 
+```{r}
+set.seed(1)
+successes <- rbinom(n = 10000, size = 10, p = 0.1)
+hist(successes)
+mean(successes)
+```
+
+*I ran the simulation 10,000 times, and the mean number of successes was 0.9856 (i.e. basically 1). I conclude that the expected number of successes in a sample of size 10 from the binomial distribution with probability of success p = 0.1 is 1. This makes sense: we're sampling 10 times, and the probability of success each time is 1/10, so we should expect to be successful on average one time out of every 10 samples.*
+
 Now, let's use the `rbinom` function in R to simulate genetic drift.
 
-Let `p` be the allele frequency in the present generation, `N` is the population size.
-`N` can be the number of diploid individuals, or the number of chromosomes in the population. Either will work, as long as you are consistent.
-For the purposes of this lab exercise, let's define `N` to be the number of diploid individuals in the population. Thus, there would be `2N` chromosomes in the population.
+Let `p` be the allele frequency in the present generation, `N` is the population size. `N` can be the number of diploid individuals, or the number of chromosomes in the population. Either will work, as long as you are consistent. For the purposes of this lab exercise, let's define `N` to be the number of diploid individuals in the population. Thus, there would be `2N` chromosomes in the population.
 
 Then,
-```
-> p<-0.1
-> N<-10
-> count<-rbinom(1,2*N,p)
-> count
-[1] 3
-> count/(2*N)
-[1] 0.15
-```
 
-Thus, the allele changed in frequency from 0.1 to 0.15 in a single generation! this is pretty boring.
-Let's do a real simulation with 1) more than 1 SNP at a time, and 2) more than 1 generation at a time!
+    > p<-0.1
+    > N<-10
+    > count<-rbinom(1,2*N,p)
+    > count
+    [1] 3
+    > count/(2*N)
+    [1] 0.15
+
+Thus, the allele changed in frequency from 0.1 to 0.15 in a single generation! this is pretty boring. Let's do a real simulation with 1) more than 1 SNP at a time, and 2) more than 1 generation at a time!
 
 ### EXERCISE 2.
 
-Write a function in R that will simulate `t` generations of genetic drift for `L` independent SNPs.
-Keep track of the allele frequencies of each of the `L` SNPs in each of the `t` generations.
-All SNPs should start in the initial generation at frequency `p`
+Write a function in R that will simulate `t` generations of genetic drift for `L` independent SNPs. Keep track of the allele frequencies of each of the `L` SNPs in each of the `t` generations. All SNPs should start in the initial generation at frequency `p`.
 
 Hint: Start by initializing a matrix to keep track of the frequencies each generation:
 
 ```{r}
-t <- 5 # number of generations
+t <- 5 # number of generations (I changed this from T to t to avoid overwriting R's `TRUE`.)
 L <- 3 # number of independent SNPs
 freqs <- matrix(nrow = t, ncol = L) # now initialize a matrix of the allele freqs each generation. Let each row be a generation, and each column be an SNP.
 freqs
@@ -96,43 +94,111 @@ Another hint: Consider initializing the first row of this matrix with the initia
 
 Then, write a loop that will iterate through each generation and will perform the binomial sampling.
 
+```{r}
+driftFunction <- function(t = 5, L = 3, p = 0.1, N = 100){
+  # Initialize the matrix
+  freqs <- matrix(nrow = t, ncol = L)
+  freqs[1,] <- rep(p, L)
+  
+  # Definenumber of chromosomes, since N is number of diploid individuals
+  nalleles <- 2*N
+  
+  # Iterate through each generation
+  for(i in 2:nrow(freqs)){
+    prevAlleleFreqs <- freqs[i-1,] # get the previous row's allele frequencies
+    
+    # Compute the allele counts in this generation, based on the previous generation's frequencies
+    newAlleleCounts <- rbinom(n = L, size = nalleles, p = prevAlleleFreqs)
+    
+    # Divide by total number of alleles to obtain frequencies
+    newAlleleFreqs <- newAlleleCounts/nalleles
+    
+    # Put the new allele frequencies into the `freqs` table
+    freqs[i,] <- newAlleleFreqs
+  }
+  return(freqs)
+}
+```
+
 ### EXERCISE 3.
 
 Use the function that you just wrote to simulate drift with the following parameters: `N`=100 (`N` is the number of diploids, so there should be `2N`=200 chromosomes) `L`=1000 `t`=10000 `p`=0.1
 
-Now, let's compute some things: 
+```{r}
+driftResults <- driftFunction(N = 100, L = 1000, t = 10000, p = 0.1)
+```
 
-a) How many of the 1000 SNP are at frequency 0 at the end of the simulation (in generation 10000)?
+Now, let's compute some things:
 
-b) How many are at frequency 1?
+a)  How many of the 1000 SNP are at frequency 0 at the end of the simulation (in generation 10000)?
 
-c) Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
+```{r}
+cat(paste0(sum(tail(driftResults, 1) == 0), " of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)"))
+```
 
-d) Make a plot of the allele frequency trajectories for 100 of the SNPs. (It should look like the plot in the PDF.)
+b)  How many are at frequency 1?
 
-Repeat the simulation, but this time set `p`=0.6.
-e) How many of the 1000 SNP are at frequency 0 at the end of the simulation (in generation 10000)?
+```{r}
+cat(paste0(sum(tail(driftResults, 1) == 1), " of the 1000 SNPs are at frequency 1 at the end of the simulation (in generation 10000)"))
+```
 
-f) How many are at frequency 1?
+c)  Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
+# XXX
 
-g) Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
+d)  Make a plot of the allele frequency trajectories for 100 of the SNPs. (It should look like the plot in the PDF.)
+
+```{r}
+# Let's just use the first 100 SNP's since it shouldn't matter which ones we pick.
+toPlot <- driftResults[,1:100] %>%
+  as.data.frame() %>%
+  mutate(gen = 1:nrow(.)) %>%
+  pivot_longer(cols = -gen, names_to = "whichSNP", values_to = "freq")
+
+toPlot %>%
+  filter(gen <= 1000) %>% # let's limit it to just the first 1000 generations.
+  ggplot(aes(x = gen, y = freq, col = whichSNP))+
+  geom_line()+
+  theme_classic()+
+  theme(legend.position = "none")+
+  scale_color_manual(values = rep(palette(), 15))+
+  ylab("Allele frequency")+
+  xlab("Generations")
+```
+
+
+Repeat the simulation, but this time set `p`=0.6. e) How many of the 1000 SNP are at frequency 0 at the end of the simulation (in generation 10000)?
+
+```{r}
+driftResults2 <- driftFunction(N = 100, L = 1000, t = 10000, p = 0.6)
+cat(paste0(sum(tail(driftResults2, 1) == 0), " of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)"))
+```
+
+e)  How many are at frequency 1?
+```{r}
+cat(paste0(sum(tail(driftResults2, 1) == 1), " of the 1000 SNPs are at frequency 1 at the end of the simulation (in generation 10000)"))
+```
+
+f)  Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
+# XXX
 
 ### EXERCISE 4.
+
 Let's look at the effect of the population size on patterns of genetic drift.
 
 Repeat the simulation, but this time, set `N`=10, 500 and 1000. Keep the other parameters the same (`p`=0.1; `L`=1000; `t`=10000). Again, `N` is the number of diploids.
 
-a) Make plots similar to the one shown above, but for all 4 populations sizes (`N`={10, 100, 500, 1000}). Plot all 4 plots on the same page so you can compare them.
+a)  Make plots similar to the one shown above, but for all 4 populations sizes (`N`={10, 100, 500, 1000}). Plot all 4 plots on the same page so you can compare them.
 
-b) Based on examination of the plots, how does the population size affect allele frequency change?
+b)  Based on examination of the plots, how does the population size affect allele frequency change?
 
-c) For each population size, in what proportion of simulation replicates did the derived allele become fixed by the end of the simulation?
+c)  For each population size, in what proportion of simulation replicates did the derived allele become fixed by the end of the simulation?
 
-d) How is this probability affected by the population size?
+d)  How is this probability affected by the population size?
 
-e) How does this probability of fixation estimated from the simulations match with the theoretical prediction?
+e)  How does this probability of fixation estimated from the simulations match with the theoretical prediction?
 
 ### EXERCISE 5.
+
 Based on your simulations from the previous questions, in which population size (e.g. N={10, 100, 500, 1000}) would you expect an allele to go to fixation the fastest, given that it goes to fixation?
 
 Why?
