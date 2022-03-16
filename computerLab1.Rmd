@@ -57,10 +57,11 @@ Second, write a simulation in R to confirm this.
 set.seed(1)
 successes <- rbinom(n = 10000, size = 10, p = 0.1)
 hist(successes)
-mean(successes)
+mn <- mean(successes)
+mn
 ```
 
-*I ran the simulation 10,000 times, and the mean number of successes was 0.9856 (i.e. basically 1). I conclude that the expected number of successes in a sample of size 10 from the binomial distribution with probability of success p = 0.1 is 1. This makes sense: we're sampling 10 times, and the probability of success each time is 1/10, so we should expect to be successful on average one time out of every 10 samples.*
+*I ran the simulation 10,000 times, and the mean number of successes was `r mn` (i.e. basically 1). I conclude that the expected number of successes in a sample of size 10 from the binomial distribution with probability of success p = 0.1 is 1. This makes sense: we're sampling 10 times, and the probability of success each time is 1/10, so we should expect to be successful on average one time out of every 10 samples.*
 
 Now, let's use the `rbinom` function in R to simulate genetic drift.
 
@@ -130,6 +131,7 @@ driftFunction <- function(t = 5, L = 3, p = 0.1, N = 100){
 Use the function that you just wrote to simulate drift with the following parameters: `N`=100 (`N` is the number of diploids, so there should be `2N`=200 chromosomes) `L`=1000 `t`=10000 `p`=0.1
 
 ```{r}
+set.seed(2)
 driftResults <- driftFunction(N = 100, L = 1000, t = 10000, p = 0.1)
 ```
 
@@ -139,19 +141,20 @@ a)  How many of the 1000 SNP are at frequency 0 at the end of the simulation (in
 
 ```{r}
 ngone <- sum(tail(driftResults, 1) == 0)
-cat(paste0(ngone, " of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)"))
 ```
+
+`r ngone` of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)
 
 b)  How many are at frequency 1?
 
 ```{r}
 nfixed <- sum(tail(driftResults, 1) == 1)
-cat(paste0(nfixed, " of the 1000 SNPs are at frequency 1 at the end of the simulation (in generation 10000)"))
 ```
+`r nfixed` of the 1000 SNPs are at frequency 1 at the end of the simulation (in generation 10000)
 
 c)  Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
 
-*Yes, this value agrees with theory. Since the initial frequency of the allele is 0.1 and we're modeling drift assuming it's neutral, then we'd expect 0.1 x 1000 = 100 neutral alleles to go to fixation. 111 is close to 100, and if we ran this simulation a whole bunch of times, we'd expect the average number of fixed alleles to be 100 overall.* 
+*Yes, this value agrees with theory. Since the initial frequency of the allele is 0.1 and we're modeling drift assuming it's neutral, then we'd expect 0.1 x 1000 = 100 neutral alleles to go to fixation. `r nfixed` is close to 100, and if we ran this simulation a whole bunch of times, we'd expect the average number of fixed alleles to be 100 overall.* 
 
 d)  Make a plot of the allele frequency trajectories for 100 of the SNPs. (It should look like the plot in the PDF.)
 
@@ -178,20 +181,23 @@ Repeat the simulation, but this time set `p`=0.6.
 e) How many of the 1000 SNP are at frequency 0 at the end of the simulation (in generation 10000)?
 
 ```{r}
+set.seed(3)
 driftResults2 <- driftFunction(N = 100, L = 1000, t = 10000, p = 0.6)
 ngone2 <- sum(tail(driftResults2, 1) == 0)
-cat(paste0(ngone2, " of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)"))
 ```
+
+`r ngone2` of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)
 
 e)  How many are at frequency 1?
 ```{r}
 nfixed2 <- sum(tail(driftResults2, 1) == 1)
-cat(paste0(nfixed2, " of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)"))
 ```
+
+`r nfixed2` of the 1000 SNPs are at frequency 0 at the end of the simulation (in generation 10000)
 
 f)  Does this value agree with the theoretical prediction for the probability of fixation of a neutral allele?
 
-*Yes, this agrees with theory. If the initial frequency of the allele is 0.6, then its probability of going to fixation is also 0.6, so we would expect roughly 600 out of 1000 neutral alleles to go to fixation. 598 is very close to 600, and if we ran this simulation many times, we'd see the values cluster around 600.*
+*Yes, this agrees with theory. If the initial frequency of the allele is 0.6, then its probability of going to fixation is also 0.6, so we would expect roughly 600 out of 1000 neutral alleles to go to fixation. `r nfixed2` is very close to 600, and if we ran this simulation many times, we'd see the values cluster around 600.*
 
 ### EXERCISE 4.
 
@@ -202,6 +208,7 @@ Repeat the simulation, but this time, set `N`=10, 500 and 1000. Keep the other p
 a)  Make plots similar to the one shown above, but for all 4 populations sizes (`N`={10, 100, 500, 1000}). Plot all 4 plots on the same page so you can compare them.
 
 ```{r}
+set.seed(4)
 results10 <- driftFunction(N = 10, L = 1000, t = 10000, p = 0.1)
 results100 <- driftFunction(N = 100, L = 1000, t = 10000, p = 0.1)
 results500 <- driftFunction(N = 500, L = 1000, t = 10000, p = 0.1)
@@ -247,16 +254,53 @@ resultsSubset %>%
 
 b)  Based on examination of the plots, how does the population size affect allele frequency change?
 
-By examining the plots, I can see
+*By examining the plots, I can see that increasing the population size increases the length of time that the alleles persist in the population. At a very small population size, almost all the alleles have either gone to fixation or died out after about 100 generations. But when N increases to 100, one allele persists almost all the way through the 1000th generation, and when N is 1000, no alleles have gone to fixation and it seems that few have died out either.*
 
 c)  For each population size, in what proportion of simulation replicates did the derived allele become fixed by the end of the simulation?
 
+```{r}
+props <- lapply(results, function(x){mean(x[nrow(x),] == 1)}) # calculate proportion fixed for each one
+```
+
+For N = 10, the proportion of alleles that went to fixation was `r props[[1]]`
+For N = 100, the proportion of alleles that went to fixation was `r props[[2]]`
+For N = 500, the proportion of alleles that went to fixation was `r props[[3]]`
+For N = 1000, the proportion of alleles that went to fixation was `r props[[4]]`
+
 d)  How is this probability affected by the population size?
 
+```{r}
+propsdf <- data.frame(n = as.numeric(names(props)),
+                      propFixed = unlist(props))
+
+# Plot the relationship
+propsdf %>%
+  ggplot(aes(x = n, y = propFixed))+
+  geom_point()+
+  ylim(0, 0.2)+
+  geom_smooth(method = "lm")+
+  theme_classic()+
+  ylab("Probability of fixation")+
+  xlab("Population size")
+```
+
+*There is no significant relationship between the population size and the probability that an allele goes to fixation.*
+
 e)  How does this probability of fixation estimated from the simulations match with the theoretical prediction?
+
+*This makes sense--the theoretical prediction for neutral alleles under genetic drift says that the probability of fixation depends only on their initial frequency in the population. So changing the population size should not affect the probability of fixation.*
+# XXX how do we account for using the population size in the rbinom() function, then?
 
 ### EXERCISE 5.
 
 Based on your simulations from the previous questions, in which population size (e.g. N={10, 100, 500, 1000}) would you expect an allele to go to fixation the fastest, given that it goes to fixation?
 
+*I would expect an allele to go to fixation the fastest in the N = 10 population, given that it goes to fixation. As the graphs above show, when N = 10, all alleles either go to fixation or die out very rapidly.*
+
 Why?
+
+# XXX
+
+
+
+
